@@ -12,6 +12,7 @@ ENV/
 # Project-specific output directories
 out/
 output/
+models/
 
 # Logs and databases
 *.log

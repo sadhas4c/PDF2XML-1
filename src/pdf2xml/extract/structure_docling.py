@@ -11,6 +11,7 @@ import logging
 from collections.abc import Sequence
 from functools import lru_cache
 from pathlib import Path
+from importlib.metadata import version
 from typing import Any
 
 from pdf2xml.extract.types import (
@@ -93,6 +94,7 @@ def _converter() -> Any:
     from docling.datamodel.pipeline_options import PdfPipelineOptions
     from docling.document_converter import DocumentConverter, PdfFormatOption
 
+    opts = PdfPipelineOptions(artifacts_path=_models_path())
     opts = PdfPipelineOptions()
     opts.do_ocr = False                   # born-digital only (CLAUDE.md §1)
     opts.do_table_structure = True
@@ -102,6 +104,29 @@ def _converter() -> Any:
         format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=opts)}
     )
 
+def _models_path() -> Path:
+    """Download once into the project's models folder; reuse it across restarts."""
+    models = Path(__file__).resolve().parents[3] / "models"
+    ready = models / ".docling-version"
+    installed_version = version("docling")
+    if ready.is_file() and ready.read_text(encoding="utf-8") == installed_version:
+        return models
+
+    from docling.utils.model_downloader import download_models
+
+    models.mkdir(parents=True, exist_ok=True)
+    log.info("Downloading Docling models into %s (first use or version change)", models)
+    download_models(
+        output_dir=models,
+        with_layout=True,
+        with_tableformer=True,
+        with_code_formula=False,
+        with_picture_classifier=False,
+        with_rapidocr=False,
+    )
+    # Only mark successful downloads, so an interrupted download is retried.
+    ready.write_text(installed_version, encoding="utf-8")
+    return models
 
 def _crop_origins(pdf: Path, doc: Any) -> dict[int, tuple[float, float]]:
     """Docling measures a page from its CropBox, the style layer from its MediaBox. In a

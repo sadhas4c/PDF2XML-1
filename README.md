@@ -31,6 +31,13 @@ pip install -e .
 ```bash
 pip install -e ".[ml]"
 ```
+Docling downloads the layout and table models into the project's `models/` folder on
+the first conversion using `engine=docling` (or `auto` when Docling is installed).
+Later runs reuse those files without downloading again. Internet is needed for the
+first download and after a Docling version change. Keep this folder between runs;
+Docker Compose mounts it at `/app/models` so it also survives container recreation.
+Models still take time to load into memory after an app restart. To retry a fresh
+model setup, delete `models/.docling-version` and run a Docling conversion again.
 
 ## Running the API Server
 
